@@ -1,0 +1,16 @@
+ピクシーの会話
+talk:やあ、僕はピクシーだよ。
+talk:ファンタジークエストでは悪者だったけど、ここでは仲良くしてね。
+SCENE1:はいはい
+SCENE2:いやん
+SCENE3:もう騙されん
+DIALOG:
+IF_SCENE1:
+talk:ありが㌧
+IF_SCENE2:
+talk:いやん
+IF_SCENE3:
+talk:じゃじゃーん「信じる心ー」。これあげる。
+talk:次に話しかけた時は、今とは違う答えを聞けると思うよ。
+switch_on:004
+END_SCENE:

@@ -1,0 +1,12 @@
+talk:オレの顔って、呪いのビデオ見た時の顔かな～？
+SCENE1:当然
+SCENE2:いいえ
+SCENE3:分からない
+DIALOG:
+IF_SCENE1:
+talk:よく分かってるようだね。
+IF_SCENE2:
+talk:ありが㌧。
+IF_SCENE3:
+talk:あっそ山。
+END_SCENE:

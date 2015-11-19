@@ -1,0 +1,10 @@
+talk:にゃあ、にゃあ？
+SCENE1:はい
+SCENE2:いいえ
+DIALOG:
+IF_SCENE1:
+talk:うん、よく分かったにゃ。僕は右利きだにゃ。
+IF_SCENE2:
+talk:ちゃうにゃん、僕は右利きだにゃー。
+END_SCENE:
+

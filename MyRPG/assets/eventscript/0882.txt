@@ -1,0 +1,10 @@
+ピクシーの会話
+talk:やあ、僕ピクシー。仲良くしてね。
+SCENE1:大切にするよ
+SCENE2:もう君から目を離せない
+DIALOG:
+IF_SCENE1:
+talk:ありが㌧
+IF_SCENE2:
+talk:ありが㌧
+END_SCENE:
