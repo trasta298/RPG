@@ -1,10 +1,10 @@
-�s�N�V�[�̉�b
-talk:�₠�A�l�s�N�V�[�B���ǂ����ĂˁB
-SCENE1:��؂ɂ����
-SCENE2:�����N����ڂ𗣂��Ȃ�
+ピクシーの会話
+talk:やあ、僕ピクシー。仲良くしてね。
+SCENE1:大切にするよ
+SCENE2:やっとコンパイルできた...
 DIALOG:
 IF_SCENE1:
-talk:���肪�d
+talk:ありが㌧
 IF_SCENE2:
-talk:���肪�d
+talk:やったね！
 END_SCENE:

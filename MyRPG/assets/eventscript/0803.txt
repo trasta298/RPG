@@ -1,10 +1,10 @@
-talk:�ɂႠ�A�ɂႠ�H
-SCENE1:�͂�
-SCENE2:������
+talk:にゃあ、にゃあ？
+SCENE1:はい
+SCENE2:いいえ
 DIALOG:
 IF_SCENE1:
-talk:����A�悭���������ɂ�B�l�͉E�������ɂ�B
+talk:うん、よく分かったにゃ。僕は右利きだにゃ。
 IF_SCENE2:
-talk:���Ⴄ�ɂ��A�l�͉E�������ɂ�[�B
+talk:ちゃうにゃん、僕は右利きだにゃー。
 END_SCENE:
 

@@ -123,49 +123,49 @@ public class rpgMain extends SurfaceView
 
 	//セルテーブル
 	MapCell celltbl[] = {
-		new MapCell(0,true),	//平原
-		new MapCell(1,true),	//芝１
-		new MapCell(2,true),	//芝２
-		new MapCell(3,true),	//家
-		new MapCell(4,false),	//木１
-		new MapCell(5,false),	//木２
-		new MapCell(6,true),	//城
-		new MapCell(7,false),	//海
-		new MapCell(8,true),	//塔（上）
-		new MapCell(9,true),	//塔（下）
-		new MapCell(10,true),	//洞窟
-		new MapCell(11,false), //岩山
-		new MapCell(12,true),	//宇宙１
-		new MapCell(13,true),	//宇宙２
-		new MapCell(14,false), //クリスタル
-		new MapCell(15,true),	//宇宙の城
-		new MapCell(16,true),	//真っ黒
-		new MapCell(17,true),	//茶色
-		new MapCell(18,false), //灰色
-		new MapCell(19,true),	//ツボ
-		new MapCell(20,true),	//空
-		new MapCell(21,true),	//地面２
-		new MapCell(22,true),	//宝箱
-		new MapCell(23,true),	//青壁
-		new MapCell(24,true),	//黒
-		new MapCell(25,false), //机
-		new MapCell(26,true),	//川１
-		new MapCell(27,true),	//川２
-		new MapCell(28,false), //洞窟岩
-		new MapCell(29,true),	//洞窟地面
-		new MapCell(30,true),	//草原１
-		new MapCell(31,true),	//草原２
-		new MapCell(32,true),	//雪地面
-		new MapCell(33,true),	//雪芝１
-		new MapCell(34,true),	//雪芝２
-		new MapCell(35,true),	//雪家
-		new MapCell(36,false), //雪木
-		new MapCell(37,true),	//雪城
-		new MapCell(38,false), //雪池
-		new MapCell(39,true),	//雪洞窟
-		new MapCell(40,true),	//雪木
-		new MapCell(41,true),	//雪芝３
-		new MapCell(42,true),	//木の壁
+		new MapCell(0,true),	//平原 00
+		new MapCell(1,true),	//芝１01
+		new MapCell(2,true),	//芝２02
+		new MapCell(3,true),	//家 03
+		new MapCell(4,false),	//木１04
+		new MapCell(5,false),	//木２ 05
+		new MapCell(6,true),	//城 06
+		new MapCell(7,false),	//海 07
+		new MapCell(8,true),	//塔（上）08
+		new MapCell(9,true),	//塔（下）09
+		new MapCell(10,true),	//洞窟 0a
+		new MapCell(11,false), //岩山 0b
+		new MapCell(12,true),	//宇宙１0c
+		new MapCell(13,true),	//宇宙２0d
+		new MapCell(14,false), //クリスタル 0e
+		new MapCell(15,true),	//宇宙の城 0f
+		new MapCell(16,true),	//真っ黒 10
+		new MapCell(17,true),	//茶色 11
+		new MapCell(18,false), //灰色 12
+		new MapCell(19,true),	//ツボ 13
+		new MapCell(20,true),	//空 14
+		new MapCell(21,true),	//地面２ 15
+		new MapCell(22,true),	//宝箱 16
+		new MapCell(23,true),	//青壁 17
+		new MapCell(24,true),	//黒 18
+		new MapCell(25,false), //机 19
+		new MapCell(26,true),	//川１1a
+		new MapCell(27,true),	//川２ 1b
+		new MapCell(28,false), //洞窟岩 1c
+		new MapCell(29,true),	//洞窟地面 1d
+		new MapCell(30,true),	//草原１ 1e
+		new MapCell(31,true),	//草原２ 1f
+		new MapCell(32,true),	//雪地面 20
+		new MapCell(33,true),	//雪芝１ 21
+		new MapCell(34,true),	//雪芝２ 22
+		new MapCell(35,true),	//雪家 23
+		new MapCell(36,false), //雪木 24
+		new MapCell(37,true),	//雪城 25
+		new MapCell(38,false), //雪池 26
+		new MapCell(39,true),	//雪洞窟 27
+		new MapCell(40,true),	//雪木 28
+		new MapCell(41,true),	//雪芝３ 29
+		new MapCell(42,true),	//木の壁 2a
 	};
 
 	//マップデータ構造
@@ -244,11 +244,11 @@ public class rpgMain extends SurfaceView
 		setFocusable(true);
 		player.speed=diswidth/3;//速度/毎秒
 
-		readMapData(2);
+		readMapData(8);
 
 		//初期位置
-		player.x = 28;
-		player.y = 39;
+		player.x = 2;
+		player.y = 3;
 		player.px = player.x*CHIP_SIZE;
 		player.py = player.y*CHIP_SIZE;
 		game_flags[5]=true;
@@ -452,24 +452,14 @@ public class rpgMain extends SurfaceView
 		touchY = event.getY();
 		float dx=20.0f;
 		float dy=20.0f;
-			if(event.getAction()==MotionEvent.ACTION_DOWN)
+		switch(event.getAction()){
+			case MotionEvent.ACTION_DOWN : 
 				touch_downX=event.getX();
 				touch_downY=event.getY();
-			}
-			if(event.getAction()==MotionEvent.ACTION_UP){
-				/*if(game_flags[9]){
-					if(touchX>diswidth/4&&touchX<diswidth/2&&touchY>disheight-diswidth/4) key_states[0] = 2;
-					else if(touchX>diswidth/2&&touchX<diswidth/4*3&&touchY>disheight-diswidth/4) key_states[1] =2;
-					else{
-						dx=touchX-touch_downX;
-						dy=touchY-touch_downY;
-					}
-					dx=touchX-touch_downX;
-					dy=touchY-touch_downY;
-				}else{*/
-					dx=touchX-touch_downX;
-					dy=touchY-touch_downY;
-				//}
+				break;
+			case MotionEvent.ACTION_UP : 
+				dx=touchX-touch_downX;
+				dy=touchY-touch_downY;
 				touch_downX=-1;
 				touch_downY=-1;
 				key_states[0] = 0;
@@ -477,7 +467,8 @@ public class rpgMain extends SurfaceView
 				key_states[2] = 0;
 				key_states[3] = 0;
 				key_states[4] = 0;
-			}
+				break;
+		}
 		if(touch_downX>-1&&touch_downY>-1&&!game_flags[9]){
 			float control_keyX=touchX-touch_downX;
 			float control_keyY=touchY-touch_downY;
@@ -509,7 +500,14 @@ public class rpgMain extends SurfaceView
 				}
 			}
 		}
-		if(Math.abs(dx)<15&&Math.abs(dy)<15&&key_states[4]!=1) key_states[4]=2;
+		if(Math.abs(dx)<15&&Math.abs(dy)<15&&key_states[4]!=1){
+			if(game_flags[9]){
+				if(touchX>diswidth/4&&touchX<diswidth/2&&touchY>disheight-diswidth/4) key_states[0] = 2;
+				else if(touchX>diswidth/2&&touchX<diswidth/4*3&&touchY>disheight-diswidth/4) key_states[1] =2;
+				else key_states[4]=2;
+			}
+			else key_states[4]=2;
+		}
 		return true;
 	}
 
@@ -828,7 +826,8 @@ public class rpgMain extends SurfaceView
 	//---------------------画面下------------------------
 	void underscreen(Canvas canvas){
 		paint.setTextSize(CHIP_SIZE/3);
-		canvas.drawText(mapfiles[now_map_no].mapname+" (" +player.x+ "," +player.y+ ")   mapsize("+map_width+","+map_height+")",0,CHIP_SIZE/3*1,paint);
+		canvas.drawText(mapfiles[now_map_no].mapname+" (" +player.x+ "," +player.y+ ")   Mapsize("+map_width+","+map_height+")",0,CHIP_SIZE/3*1,paint);
+		canvas.drawText("fps: "+(int)(1/FrameTime),0,CHIP_SIZE/3*2,paint);
 		int half_chip=CHIP_SIZE/2;
 		paint.setStyle(Paint.Style.FILL);
 		if(touch_downX>-1&&touch_downY>-1){
@@ -889,8 +888,8 @@ public class rpgMain extends SurfaceView
 				x = (gra%16)*64;
 				y = (gra/16)*64;
 
-				Rect srcRect1 = new Rect(x,y,x+64,y+64);
-				Rect destRect1 = new Rect(dsp_x-5,dsp_y-5,dsp_x+CHIP_SIZE+5,dsp_y+CHIP_SIZE+5);
+				Rect srcRect1 = new Rect(x+1,y+1,x+63,y+63);
+				Rect destRect1 = new Rect(dsp_x,dsp_y,dsp_x+CHIP_SIZE,dsp_y+CHIP_SIZE);
 				canvas.drawBitmap(map_image,srcRect1,destRect1,paint);
 
 				//---------次はイベント描画-------------
