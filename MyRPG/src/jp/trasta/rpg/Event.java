@@ -2,6 +2,7 @@ package jp.trasta.rpg;
 
 class Event{
 	int no;//イベントＮＯ
+	boolean sh;//アクティブか
 	String filename;//スクリプト名
 	int gra;//グラフィックス
 	boolean move_flag;//通過可能か

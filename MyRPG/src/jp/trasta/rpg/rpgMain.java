@@ -87,11 +87,13 @@ public class rpgMain extends SurfaceView
 	//2=イベント中
 	//3=会話イベント
 	//4=文字が流れている途中
-	//5=セーブ
+	//5=会話z
 	//7=デバッグフラグ
 	//8=テーブル更新予約フラグ
 	//9=ダイアログ中
 	//10=スクリプトスキップ中
+	//11=イベント強制移動中
+	//12=主人公強制移動中
 	boolean game_flags[] = new boolean[16];
 
 
@@ -233,7 +235,7 @@ public class rpgMain extends SurfaceView
 		chara_image=BitmapFactory.decodeResource(r,R.drawable.chara_chip);
 				
 		//イベントテーブル初期化
-		for(int i=0;i<64;i++){
+		for(int i=0;i<MAX_EVENT_TABLE;i++){
 			eventtbl[i] = new Event(i);
 		}
 		
@@ -309,6 +311,15 @@ public class rpgMain extends SurfaceView
 			x=y=0;
 			while((i=is.read()) != -1){
 				event_data[x][y]=(short)i;
+				//もし１以上のデータがあればイベントテーブルに代入
+				if(event_data[x][y] >= 1){
+					eventtbl[ event_data[x][y] ].x = x;
+					eventtbl[ event_data[x][y] ].y = y;
+					eventtbl[ event_data[x][y] ].px = x*CHIP_SIZE;
+					eventtbl[ event_data[x][y] ].py = y*CHIP_SIZE;
+					//その他初期化
+					eventtbl[ event_data[x][y] ].sum_move_length = 0.0f;
+				}
 				if(++x == map_width){
 					++y;
 					x=0;
@@ -317,6 +328,11 @@ public class rpgMain extends SurfaceView
 			}
 			is.close();
 		}catch(IOException e){}
+
+		//イベントを全てアクティブにする。０以外。
+		for(i=1;i<MAX_EVENT_TABLE;i++){
+			eventtbl[i].sh = true;
+		}
 
 /**/
 
@@ -442,8 +458,8 @@ public class rpgMain extends SurfaceView
 		event_num = maxno+1;
 
 		//KAKUHO_NO番目に入れる
-		//eventtbl[KAKUHO_NO].move_flag = true;
-		//eventtbl[KAKUHO_NO].type_of_event = 1;
+		eventtbl[KAKUHO_NO].move_flag = true;
+		eventtbl[KAKUHO_NO].type_of_event = 1;
 	}
 
 	@Override
@@ -607,9 +623,10 @@ public class rpgMain extends SurfaceView
 			}
 		}
 		//イベント中
-		if(game_flags[2]&&game_flags[5]){
-			//マップ移動時は停止中
-			if(game_flags[0] || game_flags[1]){;}
+		if(game_flags[2]){
+			//マップ移動時、会話の時、ダイアログ中、強制移動は停止中
+			if(game_flags[0] || game_flags[1] || game_flags[3] || game_flags[9] || 
+			game_flags[11] || game_flags[12]){;}
 			else{
 				ActionScript();//スクリプト実行
 			}
@@ -618,7 +635,16 @@ public class rpgMain extends SurfaceView
 		//イベント移動（エフェクト中、イベント中、会話中は受け付けない）
 		if(game_flags[0] || game_flags[1] || game_flags[2] || game_flags[3]){;}
 		else{
-			//EventMove();
+			EventMove();
+		}
+
+		//イベント強制移動
+		if(game_flags[11]){
+			CharaMoving(eventtbl[ game_buffer[0] ]);
+		}
+		//主人公強制移動
+		if(game_flags[12]){
+			MyMoving();
 		}
 
 		//マップ移動開始（幕閉じ）
@@ -725,6 +751,7 @@ public class rpgMain extends SurfaceView
 		paint.setAntiAlias(true);
 		RectF bounds = new RectF(0, 0, diswidth, diswidth);
 		DispMap(canvas);
+		DispEvent(canvas);
 		DispMy(canvas);
 		underscreen(canvas);
 
@@ -892,25 +919,9 @@ public class rpgMain extends SurfaceView
 				Rect destRect1 = new Rect(dsp_x,dsp_y,dsp_x+CHIP_SIZE,dsp_y+CHIP_SIZE);
 				canvas.drawBitmap(map_image,srcRect1,destRect1,paint);
 
-				//---------次はイベント描画-------------
-
-				//イベントデータからグラフィックスを取得
-				gra = eventtbl[ event_data[j][i] ].gra;
-
-				//グラフィックスが-1の時はスキップ
-				if(gra == -1){}
-				else{
-					//グラフィックスの位置を取得
-					x = (gra%16)*64;
-					y = (gra/16)*64;
-
-					Rect srcRect3 = new Rect(x,y,x+64,y+64);
-					Rect destRect3 = new Rect(dsp_x-2,dsp_y-2,dsp_x+CHIP_SIZE+2,dsp_y+CHIP_SIZE+2);
-					canvas.drawBitmap(chara_image,srcRect3,destRect3,paint);
-
-				}
+				/*---------次はイベント描画-------------
 				
-				/*イベントがある場合はＥマークを表示（デバッグ用）
+				イベントがある場合はＥマークを表示（デバッグ用）
 				if(event_data[j][i] >= 1 && game_flags[7]){
 					グラフィックスの位置を取得
 					x = (13%16)*CHIP_SIZE;
@@ -919,6 +930,34 @@ public class rpgMain extends SurfaceView
 					bufferg.drawImage(chara_image,dsp_x,dsp_y,
 					 dsp_x+CHIP_SIZE,dsp_y+CHIP_SIZE,x,y,x+CHIP_SIZE,y+CHIP_SIZE,this);
 */
+			}
+		}
+	}
+
+	//--------------イベント（キャラクター）描画------------------
+	void DispEvent(Canvas canvas){
+		//描画開始位置
+		float view_x;
+		float view_y;
+		//座標変換
+		view_x = WorldToScreenX( camera_px );
+		view_y = WorldToScreenY( camera_py );
+
+		for(int i=0;i<event_num;i++){
+			int dsp_x = (int)(eventtbl[i].px - (view_x - diswidth/2));
+			int dsp_y = (int)(eventtbl[i].py - (view_y - diswidth/2));
+
+				//座標変換
+				dsp_x = WorldToScreenX( dsp_x );
+				dsp_y = WorldToScreenY( dsp_y );
+
+			//グラフィックスの位置を取得
+			if(eventtbl[i].sh && eventtbl[i].gra >= 0){
+				int x = (eventtbl[i].gra%16)*64;
+				int y = (eventtbl[i].gra/16)*64;
+				Rect srcRect2 = new Rect(x+1,y+1,x+63,y+63);
+				Rect destRect2 = new Rect((int)dsp_x,(int)dsp_y,(int)dsp_x+CHIP_SIZE,(int)dsp_y+CHIP_SIZE);
+		canvas.drawBitmap(chara_image,srcRect2,destRect2,paint);
 			}
 		}
 	}
@@ -956,7 +995,6 @@ public class rpgMain extends SurfaceView
 		//ダイアログ中は決定
 		if(game_flags[9]){
 			game_flags[9] = false;
-			System.out.println("Done:Dialog");
 			game_flags[5]=true;
 		}
 		//会話中の時はウインドウを消す(文字が流れ終わった時)
@@ -1037,7 +1075,7 @@ public class rpgMain extends SurfaceView
 
 						//移動先イベントデータにKAKUHO_NOを入れる(0の時)
 						if(event_data[next_x][next_y] == 0){
-							//event_data[next_x][next_y] = KAKUHO_NO;
+							event_data[next_x][next_y] = KAKUHO_NO;
 						}
 					}
 					player.moving_flag = ismove;
@@ -1076,10 +1114,15 @@ public class rpgMain extends SurfaceView
 				event_data[player.x][player.y] = 0;
 			}
 
-			//イベントチェック
-			//その上に重なると起動するもの。
-			check_event(player.x,player.y,0);
-
+			//強制イベント移動の場合
+			if(game_flags[12]){
+				game_flags[12] = false;
+				player.sum_move_length = 0.0f;
+			}else{
+				//イベントチェック
+				//その上に重なると起動するもの。
+				check_event(player.x,player.y,0);
+			}
 		}
 	}
 
@@ -1107,11 +1150,18 @@ public class rpgMain extends SurfaceView
 			event.moving_flag = false;
 			event_data[event.x][event.y] = event.no;
 
-			//小休止(ランダム１秒～３秒)
-			ran=rand.nextInt();
-			if(ran<0){ran=-ran;}
+			//強制イベント移動の場合
+			if(game_flags[11]){
+				game_flags[11] = false;
+				game_flags[5]=true;
+				event.sum_move_length = 0.0f;
+			}else{
+				//小休止(ランダム１秒～３秒)
+				ran=rand.nextInt();
+				if(ran<0){ran=-ran;}
 
-			event.sum_move_length = -(ran%3+1);
+				event.sum_move_length = -(ran%3+1);
+			}
 		}
 	}
 
@@ -1334,11 +1384,42 @@ public class rpgMain extends SurfaceView
 			game_flags[9] = true;
 			next_flag=false;
 		}
+		//イベントを一時的に消去
+		else if(command.equals("temperace")){
+			event_data[eventtbl[ game_buffer[0] ].x][eventtbl[ game_buffer[0] ].y] = 0;
+			eventtbl[ game_buffer[0] ].sh = false;
+			next_flag=true;
+		}
+		//イベント強制移動
+		else if(command.equals("emove")){
+			//方向
+			if(value.equals("up")){eventtbl[ game_buffer[0] ].moving_dir = 0;}
+			else if(value.equals("down")){eventtbl[ game_buffer[0] ].moving_dir = 1;}
+			else if(value.equals("left")){eventtbl[ game_buffer[0] ].moving_dir = 2;}
+			else if(value.equals("right")){eventtbl[ game_buffer[0] ].moving_dir = 3;}
 
+			game_flags[11] = true;
+			next_flag=false;
+		}
+		//主人公強制移動
+		else if(command.equals("mymove")){
+			//方向
+			if(value.equals("up")){player.moving_dir = 0;}
+			else if(value.equals("down")){player.moving_dir = 1;}
+			else if(value.equals("left")){player.moving_dir = 2;}
+			else if(value.equals("right")){player.moving_dir = 3;}
+
+			game_flags[12] = true;
+			player.sum_move_length = 0.0f;
+			next_flag=false;
+		}
+		//イベント速度変更
+		else if(command.equals("espeed")){
+			eventtbl[ game_buffer[0] ].speed = (float)Integer.parseInt(value);
+			next_flag=true;
+		}
 		game_flags[5]=next_flag;
 		return next_flag;
 	}
-
-
 
 }

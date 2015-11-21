@@ -1,0 +1,8 @@
+talk:手にした途端動く手紙。しかし私はまた復活する。
+emove:right
+emove:up
+emove:left
+emove:left
+mymove:down
+mymove:right
+mymove:right
