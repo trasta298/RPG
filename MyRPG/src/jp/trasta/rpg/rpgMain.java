@@ -1,7 +1,5 @@
 package jp.trasta.rpg;
 
-import java.util.*;
-
 import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.content.Context;
@@ -9,7 +7,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Point;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -24,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.FileReader;
 
 import java.util.Random;
 
@@ -226,7 +222,6 @@ public class rpgMain extends SurfaceView
 
 
 	//コンストラクタ
-	@Override	
 	public rpgMain(Context context) {
 		super(context);
 
