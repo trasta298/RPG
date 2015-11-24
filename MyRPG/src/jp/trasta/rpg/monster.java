@@ -4,12 +4,15 @@ import java.util.ArrayList;
 import java.util.Random;
 
 class States {
+	public int lv;
 	public int hp;//HP
 	public int speed;//素早さ
 	public int atp;//攻撃力
 	public int map;//魔力
 	public int dp;//物理耐性
 	public int dm;//魔法耐性
+	public int temper;//性格
+	public ArrayList<Trick> tricks = new ArrayList<Trick>();//使えるマジックのリスト
 	States(){}
 };
 
@@ -17,16 +20,15 @@ class Monster {
 	Random rand = new Random();//乱数
 	private int id;//モンスターID
 	private int rank;//モンスターランク 0~8 0が最高
-	private int temper;//性格
-	private int lv;//モンスターのレベル
 	private States states=new States();
 	private int initial[]=new int[6];//個体値
 	private int tribal[]=new int[6];//種族値
 	private int exp;//経験値
 	private int exptable;//経験値テーブル 30:300万テーブル など
-	private ArrayList<Trick> tricks = new ArrayList<Trick>();//使えるマジックのリスト
 	private String name;//名前
 	private String Nname;//ニックネーム
+
+	//コンストラクタ
 	Monster(){}
 	Monster(int id,String name,int Rank,String n,int e){
 		this.id=id;
@@ -35,6 +37,7 @@ class Monster {
 		this.Nname=n;
 		this.exptable=e;
 	}
+
 	// idからモンスターを取得 type 0:味方 1:敵
 	public Monster getMonster(int id,int type,int Lv,String n){
 		Monster list[] = {
@@ -62,15 +65,19 @@ class Monster {
 		}
 		return e;
 	}
+
+	//モンスターの初期値を決める
 	protected void setMonsterData(int Tribal[],int Initial[][],int Temper){
 		this.tribal=Tribal;
-		this.temper=Temper;
+		this.states.temper=Temper;
 		for(int i=0;i<6;i++){
 			this.initial[i]=random_v(Initial[i][0],Initial[i][1]);
 		}
 	}
+
+	//モンスターのステータスを強制決定
 	public void setData(int Lv,int p[]){
-		this.lv=Lv;
+		this.states.lv=Lv;
 		this.states.hp=p[0];
 		this.states.speed=p[1];
 		this.states.atp=p[2];
@@ -78,6 +85,7 @@ class Monster {
 		this.states.dp=p[4];
 		this.states.dm=p[5];
 	}
+
 	//次のレベルに上がるまでに必要な経験値を返す(現在の経験値無視)
 	public int getNextExp(int lv){
 		float a = 0,b = 0,c = 0;
@@ -95,13 +103,24 @@ class Monster {
 		}
 		return i;
 	}
-	public int getLv() {
-		return lv;
-	}
+
+	//レベルをセット
 	public void setLv(int lv,int type) {//type 0:味方 1:敵
-		this.lv=lv;
-		this.states.hp=(int)(((this.tribal[0]*2+this.initial[0])*lv+5)*getTemperValue(this.temper)[0]);
+		this.states.lv=lv;
+		this.states.hp=(int)(((this.tribal[0]*2+this.initial[0])*lv+5)*getTemperValue(this.states.temper)[0]);
+		this.states.speed=(int)(((this.tribal[1]*2+this.initial[0])*lv+5)*getTemperValue(this.states.temper)[1]);
+		this.states.atp=(int)(((this.tribal[2]*2+this.initial[0])*lv+5)*getTemperValue(this.states.temper)[2]);
+		this.states.map=(int)(((this.tribal[3]*2+this.initial[0])*lv+5)*getTemperValue(this.states.temper)[3]);
+		this.states.dp=(int)(((this.tribal[4]*2+this.initial[0])*lv+5)*getTemperValue(this.states.temper)[4]);
+		this.states.dm=(int)(((this.tribal[5]*2+this.initial[0])*lv+5)*getTemperValue(this.states.temper)[5]);
 	}
+
+	//ステータスを取得
+	public States getStates(){
+		return states;
+	}
+
+	//性格補正値を取得
 	private float[] getTemperValue(int temper){
 		// hp speed atp map dp dm
 		float TemperValue[][] = {
@@ -110,6 +129,7 @@ class Monster {
 		};
 		return TemperValue[temper];
 	}
+
 };
 
 class Nazo extends Monster {

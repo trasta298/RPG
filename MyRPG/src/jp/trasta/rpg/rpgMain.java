@@ -91,6 +91,7 @@ public class rpgMain extends SurfaceView
 	//10=スクリプトスキップ中
 	//11=イベント強制移動中
 	//12=主人公強制移動中
+	//13=戦闘イベント
 	boolean game_flags[] = new boolean[16];
 
 
@@ -1117,9 +1118,14 @@ public class rpgMain extends SurfaceView
 			}else{
 				//イベントチェック
 				//その上に重なると起動するもの。
-				check_event(player.x,player.y,0);
+				boolean is=check_event(player.x,player.y,0);
+				if(!is) check_battle(player.x,player.y);
 			}
 		}
+	}
+
+	void check_battle(int x,int y){
+		if(map_data[x][y]==0){}
 	}
 
 	//キャラ移動
@@ -1162,29 +1168,31 @@ public class rpgMain extends SurfaceView
 	}
 
 	//その場所のイベントチェック
-	void check_event(int x,int y,int type){
+	boolean check_event(int x,int y,int type){
 		//領域外の時
-		if(x < 0 || y < 0 || x >= map_width || y >= map_height)return;
+		if(x < 0 || y < 0 || x >= map_width || y >= map_height)return false;
 
 		//イベントがあった場合
 		if(event_data[x][y] != 0 && event_data[x][y] != KAKUHO_NO){
 			//上に乗った時。それは重なると起動するものか？
 			if(type == 0 && !eventtbl[ event_data[x][y] ].move_flag){
 				//違う場合は抜ける
-				return;
+				return false;
 			}
 			
 			//決定ボタンを押した時。それは遠くから起動するものか？
 			if(type == 1 && eventtbl[ event_data[x][y] ].move_flag){
 				//違う場合は抜ける
-				return;
+				return false;
 			}
 
 			game_buffer[0] = eventtbl[ event_data[x][y] ].no;//イベントNO記憶
 			game_flags[2] = true;//イベントフラグセット
 			//スクリプトファイル名決定
 			game_strings[0] = "eventscript/"+eventtbl[ game_buffer[0] ].filename+".txt";
+			return true;
 		}
+		return false;
 	}
 
 	//スクリプト実行
