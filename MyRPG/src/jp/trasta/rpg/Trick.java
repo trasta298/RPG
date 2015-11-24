@@ -5,20 +5,20 @@ package jp.trasta.rpg;
  */
 
 public class Trick {
-    private int id;//‹ZID
-    private String name;//‹Z–¼
-    Trick(int id,String name){
-        this.id=id;
-        this.name=name;
-    }
+	private int id;//ID
+	private String name;//é­”æ³•ã®åå‰
+	Trick(int id,String name){
+		this.id=id;
+		this.name=name;
+	}
+	public void attack(Monster sttacker,Monster victim){
+
+	}
 }
 
 class ig extends Trick{
-    private int baseatp=10;
-    ig(int id){
-       super(id,"ƒCƒO");
-    }
-    public void attack(Monster sttacker,Monster victim){
-
-    }
+	private int baseatp=10;
+	ig(int id){
+	   super(id,"ã‚¤ã‚°");
+	}
 }

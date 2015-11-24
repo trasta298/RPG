@@ -1,38 +1,147 @@
 package jp.trasta.rpg;
 
 import java.util.ArrayList;
+import java.util.Random;
 
-public class Monster {
-	private int id;//ƒ‚ƒ“ƒXƒ^[ID
-	private int lv;//ƒ‚ƒ“ƒXƒ^[‚ÌƒŒƒxƒ‹
-	private int exp;//ŒoŒ±’l
-	private int atp;//UŒ‚—Í
-	private int hp;//HP
-	private int defense_p;//•¨—‘Ï«
-	private int defense_m;//–‚–@‘Ï«
-	private int map;//–‚—Í
-	private ArrayList<Trick> tricks = new ArrayList<Trick>();//g‚¦‚éƒ}ƒWƒbƒN‚ÌƒŠƒXƒg
-	private String name;//–¼‘O
-	private String Nname;//ƒjƒbƒNƒl[ƒ€
-	Monster(int id,String nname,String name){
+class States {
+	public int hp;//HP
+	public int speed;//ç´ æ—©ã•
+	public int atp;//æ”»æ’ƒåŠ›
+	public int map;//é­”åŠ›
+	public int dp;//ç‰©ç†è€æ€§
+	public int dm;//é­”æ³•è€æ€§
+	States(){}
+};
+
+class Monster {
+	Random rand = new Random();//ä¹±æ•°
+	private int id;//ãƒ¢ãƒ³ã‚¹ã‚¿ãƒ¼ID
+	private int rank;//ãƒ¢ãƒ³ã‚¹ã‚¿ãƒ¼ãƒ©ãƒ³ã‚¯ 0~8 0ãŒæœ€é«˜
+	private int temper;//æ€§æ ¼
+	private int lv;//ãƒ¢ãƒ³ã‚¹ã‚¿ãƒ¼ã®ãƒ¬ãƒ™ãƒ«
+	private States states=new States();
+	private int initial[]=new int[6];//å€‹ä½“å€¤
+	private int tribal[]=new int[6];//ç¨®æ—å€¤
+	private int exp;//çµŒé¨“å€¤
+	private int exptable;//çµŒé¨“å€¤ãƒ†ãƒ¼ãƒ–ãƒ« 30:300ä¸‡ãƒ†ãƒ¼ãƒ–ãƒ« ãªã©
+	private ArrayList<Trick> tricks = new ArrayList<Trick>();//ä½¿ãˆã‚‹ãƒã‚¸ãƒƒã‚¯ã®ãƒªã‚¹ãƒˆ
+	private String name;//åå‰
+	private String Nname;//ãƒ‹ãƒƒã‚¯ãƒãƒ¼ãƒ 
+	Monster(){}
+	Monster(int id,String name,int Rank,String n,int e){
 		this.id=id;
-		this.Nname=nname;
 		this.name=name;
+		this.rank=Rank;
+		this.Nname=n;
+		this.exptable=e;
 	}
-	//Ÿ‚ÌƒŒƒxƒ‹‚Éã‚ª‚é‚Ü‚Å‚É•K—v‚ÈŒoŒ±’l‚ğ•Ô‚·(Œ»İ‚ÌŒoŒ±’l–³‹)
-	public int getExpTable(){
-		return 0;
+	// idã‹ã‚‰ãƒ¢ãƒ³ã‚¹ã‚¿ãƒ¼ã‚’å–å¾— type 0:å‘³æ–¹ 1:æ•µ
+	public Monster getMonster(int id,int type,int Lv,String n){
+		Monster list[] = {
+			new Nazo(type,Lv,n),
+			new Slime(type,Lv,n),
+			new Golem(type,Lv,n)
+		};
+		return list[id];
+	}
+	private int random_v(int min,int max){
+		int e = 0;
+		for(int i=min;i<max;i++){
+			if(i==max-1){
+				int ran=rand.nextInt(3);
+				if(ran==0) e=max;
+				else e=i;
+				break;
+			}else{
+				int ran=rand.nextInt(2);
+				if(ran==0){
+					e=i;
+					break;
+				}
+			}
+		}
+		return e;
+	}
+	protected void setMonsterData(int Tribal[],int Initial[][],int Temper){
+		this.tribal=Tribal;
+		this.temper=Temper;
+		for(int i=0;i<6;i++){
+			this.initial[i]=random_v(Initial[i][0],Initial[i][1]);
+		}
+	}
+	public void setData(int Lv,int p[]){
+		this.lv=Lv;
+		this.states.hp=p[0];
+		this.states.speed=p[1];
+		this.states.atp=p[2];
+		this.states.map=p[3];
+		this.states.dp=p[4];
+		this.states.dm=p[5];
+	}
+	//æ¬¡ã®ãƒ¬ãƒ™ãƒ«ã«ä¸ŠãŒã‚‹ã¾ã§ã«å¿…è¦ãªçµŒé¨“å€¤ã‚’è¿”ã™(ç¾åœ¨ã®çµŒé¨“å€¤ç„¡è¦–)
+	public int getNextExp(int lv){
+		float a = 0,b = 0,c = 0;
+		int d=50;
+		int i;
+		if(exptable==30){
+			a=0.019f;b=0.1f;c=29477.2f;//300ä¸‡ãƒ†ãƒ¼ãƒ–ãƒ«
+		}else if(exptable==35){
+			a=0.0215f;b=0.1f;c=29195.3f;//350ä¸‡ãƒ†ãƒ¼ãƒ–ãƒ«
+		}
+		if(lv<51){
+			i=(int) Math.floor((int)(10*(1+(1/(1+(lv+(1/a))*b))))^(lv-1)*lv);
+		}else{
+			i=(int) Math.floor((int)(10*(1+(1/(1+(d+(1/a))*b))))^(int)((d-1)*d+Math.sqrt((lv-d)/d)*c));
+		}
+		return i;
 	}
 	public int getLv() {
 		return lv;
 	}
+	public void setLv(int lv,int type) {//type 0:å‘³æ–¹ 1:æ•µ
+		this.lv=lv;
+		this.states.hp=(int)(((this.tribal[0]*2+this.initial[0])*lv+5)*getTemperValue(this.temper)[0]);
+	}
+	private float[] getTemperValue(int temper){
+		// hp speed atp map dp dm
+		float TemperValue[][] = {
+			{1,1,1,1,1,1},
+			{1.1f,0.9f,1,1,1,1}
+		};
+		return TemperValue[temper];
+	}
+};
+
+class Nazo extends Monster {
+	// hp speed atp map dp dm
+	private int tribal[]={10,10,10,10,10,10};
+	private int initial[][]={{10,20},{10,20},{10,20},{10,20},{10,20},{10,20}};
+	private int temper=rand.nextInt(2);
+	Nazo(int type,int lv,String n){
+		super(0,"ã‚¢ãƒ³ãƒã‚¦ãƒ³",0,n,35);
+		setMonsterData(this.tribal,this.initial,this.temper);
+		setLv(lv,type);
+	}
 };
 
 class Slime extends Monster {
-	Slime(String nname,int lv,ArrayList<Trick> tricks){
-		super(1,nname,"ƒXƒ‰ƒCƒ€");
+	private int tribal[]={10,10,10,10,10,10};
+	private int initial[][]={{10,20},{10,20},{10,20},{10,20},{10,20},{10,20}};
+	private int temper=rand.nextInt(2);
+	Slime(int type,int lv,String n){
+		super(1,"ã‚¹ãƒ©ã‚¤ãƒ ",8,n,30);
+		setMonsterData(this.tribal,this.initial,this.temper);
+		setLv(lv,type);
 	}
-	public void setLv(int lv){
+};
 
+class Golem extends Monster {
+	private int tribal[]={10,10,10,10,10,10};
+	private int initial[][]={{10,20},{10,20},{10,20},{10,20},{10,20},{10,20}};
+	private int temper=rand.nextInt(2);
+	Golem(int type,int lv,String n){
+		super(2,"ã‚´ãƒ¼ãƒ¬ãƒ ",8,n,30);
+		setMonsterData(this.tribal,this.initial,this.temper);
+		setLv(lv,type);
 	}
 };
