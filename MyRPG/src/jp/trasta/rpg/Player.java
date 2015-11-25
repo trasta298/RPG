@@ -10,10 +10,16 @@ public class Player{
 	float sum_move_length;//移動距離（３２ドットずつ）
 	int anime_no;//２通りのアニメ
 	float anime_wait;//アニメウェイト
+	int hasmonster;
+	Monster list[]=new Monster[3];
 
-	Player(int chip_no){
+	Player(int chip_no,Monster base){
 		this.chip_no = chip_no;
 		moving_dir = 1;
 		anime_no = 0;
+		list[0]=base.getMonster(0,0,20);
+		list[1]=base.getMonster(1,0,20);
+		list[2]=base.getMonster(3,0,20);
+		hasmonster=3;
 	}
 }

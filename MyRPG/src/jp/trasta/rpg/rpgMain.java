@@ -1,28 +1,11 @@
 package jp.trasta.rpg;
 
-import android.content.res.AssetManager;
-import android.content.res.Resources;
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.os.Bundle;
-import android.graphics.Color;
-import android.graphics.Rect;
-import android.graphics.RectF;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.view.MotionEvent;
-import android.view.Display;
-import android.view.WindowManager;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
-import java.util.Random;
+import android.content.*;
+import android.content.res.*;
+import android.graphics.*;
+import android.view.*;
+import java.io.*;
+import java.util.*;
 
 //サーフェイスビューの利用
 public class rpgMain extends SurfaceView 
@@ -37,13 +20,15 @@ public class rpgMain extends SurfaceView
 	int diswidth = disp.getWidth();//画面横
 	int disheight = disp.getHeight();//画面縦
 
-	Player player = new Player(176);
+	Monster base = new Monster();
+	Player player = new Player(176,base);
 	Random rand = new Random();//乱数
 
 	//キーの状態(離している=0、押し続けている=1、押した瞬間=2）
 	private int key_states[] = new int[5];//４方向（上=0,下=1,左=2,右=3）＋Ｚキー=4
 
 	Bitmap chara_image,map_image;
+	Bitmap enemy_a,enemy_b,enemy_c;
 
 	private float FrameTime;//１フレームあたりの時間（秒）
 	private long waitTime;//現在時刻保存用
@@ -78,6 +63,8 @@ public class rpgMain extends SurfaceView
 	//ゲーム進行スイッチ
 	boolean game_switch[] = new boolean[128];
 
+	private Monster enemy_list[] = new Monster[3];
+
 	//------------ゲーム管理フラグ-------------
 	//0=マップ移動（黒幕下がる）
 	//1=マップ移動（黒幕上がる）
@@ -92,6 +79,8 @@ public class rpgMain extends SurfaceView
 	//11=イベント強制移動中
 	//12=主人公強制移動中
 	//13=戦闘イベント
+	//14=戦闘画面移動（黒幕下がる）
+	//15=戦闘画面移動（黒幕上がる）
 	boolean game_flags[] = new boolean[16];
 
 
@@ -110,6 +99,9 @@ public class rpgMain extends SurfaceView
 	//6=会話中の文字の位置。
 	//7=現在選択中選択肢
 	//8=選択肢の数
+	//9=前の敵と出会ってからの歩数カウント
+	//10=味方の数
+	//11=敵の数
 	int game_buffer[] = new int[16];
 
 	//------------ゲーム管理文字列-----------
@@ -246,8 +238,8 @@ public class rpgMain extends SurfaceView
 		readMapData(8);
 
 		//初期位置
-		player.x = 2;
-		player.y = 3;
+		player.x = 9;
+		player.y = 10;
 		player.px = player.x*CHIP_SIZE;
 		player.py = player.y*CHIP_SIZE;
 		game_flags[5]=true;
@@ -564,7 +556,7 @@ public class rpgMain extends SurfaceView
 		move();
 		paint();
 		//キー状態で移動処理
-		if(game_flags[0] || game_flags[1] || game_flags[2]|| game_flags[3]){;}
+		if(game_flags[0] || game_flags[1] || game_flags[2]|| game_flags[3] ||game_flags[14] ||game_flags[15]||game_flags[13]){;}
 		else{
 			KeyForMove();
 		}
@@ -630,7 +622,7 @@ public class rpgMain extends SurfaceView
 		}
 
 		//イベント移動（エフェクト中、イベント中、会話中は受け付けない）
-		if(game_flags[0] || game_flags[1] || game_flags[2] || game_flags[3]){;}
+		if(game_flags[0] || game_flags[1] || game_flags[2] || game_flags[3] ||game_flags[14] ||game_flags[15] || game_flags[13]){;}
 		else{
 			EventMove();
 		}
@@ -665,6 +657,28 @@ public class rpgMain extends SurfaceView
 				game_flags[5]=true;
 			}
 		}
+
+		//戦闘画面開始（幕閉じ）
+		if(game_flags[14]){
+			//黒い幕が降りてくる(1.1秒)
+			game_waits[0] += FrameTime;
+			if(game_waits[0] >= 1.1f){
+				game_flags[14] = false;
+				game_flags[15] = true;
+				game_flags[13] = true;
+			}
+		}
+		//戦闘画面移動２（幕開け）
+		else if(game_flags[15]){
+			//黒い幕が上っていく(1.2秒)
+			game_waits[0] -= FrameTime;
+			if(game_waits[0] <= 0.0f){
+				game_flags[15] = false;
+				game_waits[0] = 0.0f;
+				game_flags[5]=true;
+			}
+		}
+
 	}
 
 	//イベント移動開始
@@ -744,16 +758,28 @@ public class rpgMain extends SurfaceView
 		Canvas canvas=holder.lockCanvas();
 		if (canvas==null) return;
 		canvas.drawColor(Color.BLACK);
-		paint.setColor(Color.WHITE);
 		paint.setAntiAlias(true);
 		RectF bounds = new RectF(0, 0, diswidth, diswidth);
+		paint.setColor(Color.BLACK);
+
+		if(game_flags[13]){
+			canvas.drawColor(Color.WHITE);
+			DispBattle(canvas);
+			if(game_flags[14] ||game_flags[15]){
+				paint.setColor(Color.BLACK);
+				canvas.drawRect(0,0,diswidth,(int)(disheight*game_waits[0]),paint);
+			}
+			holder.unlockCanvasAndPost(canvas);
+			return;
+		}
+		paint.setColor(Color.WHITE);
 		DispMap(canvas);
 		DispEvent(canvas);
 		DispMy(canvas);
 		underscreen(canvas);
 
 		//黒い幕（マップ移動時）
-		if(game_flags[0] || game_flags[1]){
+		if(game_flags[0] || game_flags[1] ||game_flags[14] ||game_flags[15]){
 			paint.setColor(Color.BLACK);
 			canvas.drawRect(0,0,diswidth,(int)(disheight*game_waits[0]),paint);
 		}
@@ -852,6 +878,8 @@ public class rpgMain extends SurfaceView
 		paint.setTextSize(CHIP_SIZE/3);
 		canvas.drawText(mapfiles[now_map_no].mapname+" (" +player.x+ "," +player.y+ ")   Mapsize("+map_width+","+map_height+")",0,CHIP_SIZE/3*1,paint);
 		canvas.drawText("fps: "+(int)(1/FrameTime),0,CHIP_SIZE/3*2,paint);
+		canvas.drawText("cellnumber: "+map_data[player.x][player.y],0,CHIP_SIZE,paint);
+	
 		int half_chip=CHIP_SIZE/2;
 		paint.setStyle(Paint.Style.FILL);
 		if(touch_downX>-1&&touch_downY>-1){
@@ -871,10 +899,11 @@ public class rpgMain extends SurfaceView
 
  
 		//マップデータの範囲（カメラからMAP_HANIチップ分）
-		start_x = (int)camera_px/CHIP_SIZE - 9;
-		start_y = (int)camera_py/CHIP_SIZE - 9;
-		end_x = start_x + 2*9;
-		end_y = start_y + 2*20;
+		start_x = (int)camera_px/CHIP_SIZE - 7;
+		start_y = (int)camera_py/CHIP_SIZE - 7;
+		end_x = start_x + 2*7;
+		int a=(int)7*disheight/diswidth;
+		end_y = start_y + 2*(a+1);
 
 		//描画位置ＩＪ
 		int disp_start_i,disp_i,disp_start_j,disp_j;
@@ -989,6 +1018,11 @@ public class rpgMain extends SurfaceView
 
 	//Zキーの処理
 	void ZAction(){
+		//戦闘画面
+		if(game_flags[13]){
+			game_flags[13]=false;
+			return;
+		}
 		//ダイアログ中は決定
 		if(game_flags[9]){
 			game_flags[9] = false;
@@ -1125,7 +1159,108 @@ public class rpgMain extends SurfaceView
 	}
 
 	void check_battle(int x,int y){
-		if(map_data[x][y]==0){}
+		if(map_data[x][y]==0){
+			if(game_buffer[9]>4){
+				int ran=rand.nextInt(15-game_buffer[9]);
+				if(ran==0){
+					ran=rand.nextInt(3);
+					Occurrence oc=new Occurrence(now_map_no,map_data[x][y]);
+					Monster list[]=new Monster[3];
+					for(int i=0;i<=ran;i++) list[i]=oc.getOccurrence();
+					game_buffer[10]=ran+1;
+					Battle(list);
+					game_buffer[9]=0;
+				}
+			}
+			game_buffer[9]++;
+		}
+	}
+
+	void Battle(Monster e_list[]){
+		enemy_list=e_list;
+		game_flags[14]=true;
+		enemy_a=getImage(enemy_list[0].getid());
+		if(game_buffer[10]>1){
+			enemy_b=getImage(enemy_list[1].getid());
+			if(game_buffer[10]>2) enemy_c=getImage(enemy_list[2].getid());
+		}
+	}
+
+	void DispBattle(Canvas canvas){
+		paint.setTextSize(CHIP_SIZE/2);
+		paint.setColor(Color.BLACK);
+		paint.setStyle(Paint.Style.STROKE);
+		paint.setStrokeWidth(CHIP_SIZE/7);
+		RectF rectf = new RectF(CHIP_SIZE/7,disheight/2+CHIP_SIZE/7,diswidth-CHIP_SIZE/7,(int)disheight/8*5-CHIP_SIZE/7);
+		canvas.drawRoundRect(rectf, 30, 30, paint);
+
+		RectF rect = new RectF(CHIP_SIZE/7,CHIP_SIZE/7,diswidth-CHIP_SIZE/7,(int)CHIP_SIZE*3+CHIP_SIZE/2-CHIP_SIZE/7);
+		canvas.drawRoundRect(rect, 20, 20, paint);
+
+		paint.setStyle(Paint.Style.FILL_AND_STROKE);
+		paint.setStrokeWidth(0.0f);
+		States e_states=player.list[0].getStates();
+		canvas.drawText(""+player.list[0].getName(0),CHIP_SIZE/2,CHIP_SIZE*1,paint);
+		canvas.drawText("Lv "+e_states.lv,CHIP_SIZE/2,CHIP_SIZE*1+CHIP_SIZE/2,paint);
+		canvas.drawText("HP "+e_states.hp,CHIP_SIZE/2,CHIP_SIZE*2,paint);
+		canvas.drawText("MP "+e_states.mp,CHIP_SIZE/2,CHIP_SIZE*2+CHIP_SIZE/2,paint);
+
+	if(player.hasmonster>1){
+		e_states=player.list[1].getStates();
+		canvas.drawText(""+player.list[1].getName(0),CHIP_SIZE*4,CHIP_SIZE*1,paint);
+		canvas.drawText("Lv "+e_states.lv,CHIP_SIZE*4,CHIP_SIZE*1+CHIP_SIZE/2,paint);
+		canvas.drawText("HP "+e_states.hp,CHIP_SIZE*4,CHIP_SIZE*2,paint);
+		canvas.drawText("MP "+e_states.mp,CHIP_SIZE*4,CHIP_SIZE*2+CHIP_SIZE/2,paint);
+
+		if(player.hasmonster>2)
+		e_states=player.list[2].getStates();
+		canvas.drawText(""+player.list[2].getName(0),CHIP_SIZE*8,CHIP_SIZE*1,paint);
+		canvas.drawText("Lv "+e_states.lv,CHIP_SIZE*8,CHIP_SIZE*1+CHIP_SIZE/2,paint);
+		canvas.drawText("HP "+e_states.hp,CHIP_SIZE*8,CHIP_SIZE*2,paint);
+		canvas.drawText("MP "+e_states.mp,CHIP_SIZE*8,CHIP_SIZE*2+CHIP_SIZE/2,paint);
+		}
+
+		Rect srcRect,destRect;
+
+		if(game_buffer[10]==1){
+			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
+			destRect = new Rect((int)CHIP_SIZE*4,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*7,(int)disheight/2);
+			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
+		}else if(game_buffer[10]==2){
+			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
+			destRect = new Rect((int)CHIP_SIZE*2,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*5,(int)disheight/2);
+			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
+			srcRect = new Rect(0,0,enemy_b.getWidth(),enemy_b.getHeight());
+			destRect = new Rect((int)CHIP_SIZE*6,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*9,(int)disheight/2);
+			canvas.drawBitmap(enemy_b,srcRect,destRect,paint);
+		}else{
+			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
+			destRect = new Rect((int)CHIP_SIZE*0,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*3,(int)disheight/2);
+			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
+			srcRect = new Rect(0,0,enemy_b.getWidth(),enemy_b.getHeight());
+			destRect = new Rect((int)CHIP_SIZE*4,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*7,(int)disheight/2);
+			canvas.drawBitmap(enemy_b,srcRect,destRect,paint);
+			srcRect = new Rect(0,0,enemy_c.getWidth(),enemy_c.getHeight());
+			destRect = new Rect((int)CHIP_SIZE*8,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*11,(int)disheight/2);
+			canvas.drawBitmap(enemy_c,srcRect,destRect,paint);
+		}
+	}
+
+	public Bitmap getImage(int i){
+		AssetManager as = getResources().getAssets();
+		BufferedInputStream bis = null;
+		try {
+			try{
+				bis = new BufferedInputStream(as.open("monster/" + i + ".png"));
+			}catch (IOException e){}
+			return BitmapFactory.decodeStream(bis);
+		} finally {
+			try {
+				bis.close();
+			} catch (Exception e) {
+			//IOException, NullPointerException
+			}
+		}
 	}
 
 	//キャラ移動
