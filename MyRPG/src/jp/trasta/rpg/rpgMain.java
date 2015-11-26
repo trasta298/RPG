@@ -25,7 +25,7 @@ public class rpgMain extends SurfaceView
 	Random rand = new Random();//乱数
 
 	//キーの状態(離している=0、押し続けている=1、押した瞬間=2）
-	private int key_states[] = new int[5];//４方向（上=0,下=1,左=2,右=3）＋Ｚキー=4
+	private int key_states[] = new int[7];//４方向（上=0,下=1,左=2,右=3）＋Ｚキー=4 その時x座標=5 y座標=6
 
 	Bitmap chara_image,map_image;
 	Bitmap enemy_a,enemy_b,enemy_c;
@@ -45,7 +45,7 @@ public class rpgMain extends SurfaceView
 	int dir_x[] = {0,0,-1,+1};
 	int dir_y[] = {-1,+1,0,0};
 
-	private final int CHIP_SIZE=diswidth/11;//チップサイズ
+	private int CHIP_SIZE=diswidth/11;//チップサイズ
 	final int MAX_EVENT_TABLE=100;//イベントテーブルの最大個数
 	final int KAKUHO_NO=99;//確保イベントNO（キャラが次に着く位置）
 
@@ -100,9 +100,22 @@ public class rpgMain extends SurfaceView
 	//7=現在選択中選択肢
 	//8=選択肢の数
 	//9=前の敵と出会ってからの歩数カウント
-	//10=味方の数
-	//11=敵の数
 	int game_buffer[] = new int[16];
+
+	//------------バトル管理バッファ-----------
+	//0=敵の数
+	//1=ターン
+	//3=log 文字の位置
+	int battle_buffer[] = new int[16];
+
+	//------------バトル管理フラグ-------------
+	//0=log判定
+	//1=文字が流れる途中
+	boolean battle_flags[] = new boolean[8];
+
+
+	// 0,0が攻撃 1,id が特技 2,idが道具
+	int select_action[][] = new int[3][2];
 
 	//------------ゲーム管理文字列-----------
 	//0=現在のスクリプトファイル名
@@ -110,6 +123,7 @@ public class rpgMain extends SurfaceView
 	//2=分岐１
 	//3=分岐２
 	//4=分岐３
+	//5=現在のlog内容
 	String game_strings[] = new String[8];
 	char game_talks[] = new char[256];//会話内容char配列
 
@@ -510,8 +524,11 @@ public class rpgMain extends SurfaceView
 				if(touchX>diswidth/4&&touchX<diswidth/2&&touchY>disheight-diswidth/4) key_states[0] = 2;
 				else if(touchX>diswidth/2&&touchX<diswidth/4*3&&touchY>disheight-diswidth/4) key_states[1] =2;
 				else key_states[4]=2;
+			}else{
+				key_states[4]=2;
+				key_states[5]=(int) touchX;
+				key_states[6]=(int) touchY;
 			}
-			else key_states[4]=2;
 		}
 		return true;
 	}
@@ -521,6 +538,7 @@ public class rpgMain extends SurfaceView
 	public void surfaceCreated(SurfaceHolder holder) {
 		waitTime=System.currentTimeMillis();//現在時刻保存
 		//スレッドの開始
+		disheight=getHeight();
 		thread=new Thread(this);
 		thread.start();
 	}
@@ -564,7 +582,7 @@ public class rpgMain extends SurfaceView
 		//Zキー（決定キー）を押した時（）
 		if(key_states[4] == 2){
 			//決定キーのいろんな処理
-			ZAction();
+			ZAction(key_states[5],key_states[6]);
 
 			//キーの状態を押し続けに変更。
 			key_states[4] = 3;
@@ -597,6 +615,21 @@ public class rpgMain extends SurfaceView
 					game_buffer[6] = game_strings[1].length();
 					//完了
 					game_flags[4] = false;
+				}
+			}
+		}
+
+		//会話中の場合、文字が流れていく
+		if(battle_flags[0]){
+			//0.05秒に1文字
+			game_waits[1] += FrameTime;
+			if(game_waits[1] >= 0.05f){
+				game_waits[1] = 0.0f;
+				battle_buffer[3]++;
+				if(battle_buffer[3] > game_strings[5].length()){
+					battle_buffer[3] = game_strings[5].length();
+					//完了
+					battle_flags[1] = false;
 				}
 			}
 		}
@@ -676,6 +709,13 @@ public class rpgMain extends SurfaceView
 				game_flags[15] = false;
 				game_waits[0] = 0.0f;
 				game_flags[5]=true;
+				
+				game_strings[5]="敵モンスターがあらわれた。";
+				battle_flags[0]=true;
+				battle_flags[1]=true;
+				battle_buffer[3]=0;
+				//char配列にコピー
+				game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
 			}
 		}
 
@@ -1016,36 +1056,6 @@ public class rpgMain extends SurfaceView
 		return (int)(p - camera_py+diswidth/2);
 	}
 
-	//Zキーの処理
-	void ZAction(){
-		//戦闘画面
-		if(game_flags[13]){
-			game_flags[13]=false;
-			return;
-		}
-		//ダイアログ中は決定
-		if(game_flags[9]){
-			game_flags[9] = false;
-			game_flags[5]=true;
-		}
-		//会話中の時はウインドウを消す(文字が流れ終わった時)
-		if(game_flags[3]){
-			if(!game_flags[4]){
-				game_flags[3] = false;
-				game_flags[5]=true;
-			}
-			else game_buffer[6] = game_strings[1].length();
-			game_flags[4] = false;
-		}
-		//そうでなくてイベント中でないなら、イベントチェック
-		else if(!game_flags[2]){
-			//その方向にイベントがあるかチェック
-			//決定ボタンが押されると実行するものを実行
-			check_event(player.x + dir_x[player.moving_dir] , player.y + dir_y[player.moving_dir],1);
-		}
-	}
-
-
 
 	//キー状態で移動処理
 	
@@ -1158,6 +1168,42 @@ public class rpgMain extends SurfaceView
 		}
 	}
 
+	//Zキーの処理
+	void ZAction(int x,int y){
+		//戦闘画面
+		if(game_flags[13]){
+			//会話中の時はウインドウを消す(文字が流れ終わった時)
+			if(battle_flags[0]){
+				if(!battle_flags[1]) update_battle(x,y);
+				else battle_buffer[3] = game_strings[5].length();
+				battle_flags[1] = false;
+			}
+			//game_flags[13]=false;
+			return;
+		}
+		//ダイアログ中は決定
+		if(game_flags[9]){
+			game_flags[9] = false;
+			game_flags[5]=true;
+		}
+		//会話中の時はウインドウを消す(文字が流れ終わった時)
+		if(game_flags[3]){
+			if(!game_flags[4]){
+				game_flags[3] = false;
+				game_flags[5]=true;
+			}
+			else game_buffer[6] = game_strings[1].length();
+			game_flags[4] = false;
+		}
+		//そうでなくてイベント中でないなら、イベントチェック
+		else if(!game_flags[2]){
+			//その方向にイベントがあるかチェック
+			//決定ボタンが押されると実行するものを実行
+			check_event(player.x + dir_x[player.moving_dir] , player.y + dir_y[player.moving_dir],1);
+		}
+	}
+
+
 	void check_battle(int x,int y){
 		if(map_data[x][y]==0){
 			if(game_buffer[9]>4){
@@ -1167,7 +1213,7 @@ public class rpgMain extends SurfaceView
 					Occurrence oc=new Occurrence(now_map_no,map_data[x][y]);
 					Monster list[]=new Monster[3];
 					for(int i=0;i<=ran;i++) list[i]=oc.getOccurrence();
-					game_buffer[10]=ran+1;
+					battle_buffer[0]=ran+1;
 					Battle(list);
 					game_buffer[9]=0;
 				}
@@ -1177,13 +1223,101 @@ public class rpgMain extends SurfaceView
 	}
 
 	void Battle(Monster e_list[]){
+		//battle_buffer[1]
+			//1=1匹目 選択
+			//2=2匹目 選択
+			//3=3匹目 選択
 		enemy_list=e_list;
 		game_flags[14]=true;
 		enemy_a=getImage(enemy_list[0].getid());
-		if(game_buffer[10]>1){
+		if(battle_buffer[0]>1){
 			enemy_b=getImage(enemy_list[1].getid());
-			if(game_buffer[10]>2) enemy_c=getImage(enemy_list[2].getid());
+			if(battle_buffer[0]>2) enemy_c=getImage(enemy_list[2].getid());
 		}
+		battle_buffer[1]=1;
+	}
+
+	void update_battle(int x,int y){
+		if(battle_buffer[1]==1){
+			if(diswidth/2>x){
+				if(disheight/16*11<y&&disheight/32*27>y){
+					select_action[0][0]=0;
+					select_action[0][1]=0;
+					if(player.hasmonster==1){
+						//戦闘に移る
+						battle_buffer[1]=4;
+					}else{
+						battle_buffer[1]=2;
+					}
+				}else if(disheight/32*27<y){
+				}
+			}else{
+				if(disheight/16*11<y&&disheight/32*27>y){
+				}else if(disheight/32*27<y){
+					battle_flags[0]=false;
+					game_flags[13]=false;
+				}
+			}
+		}else if(battle_buffer[1]==2){
+			if(diswidth/2>x){
+				if(disheight/16*11<y&&disheight/32*27>y){
+					select_action[1][0]=0;
+					select_action[1][1]=0;
+					if(player.hasmonster==2){
+						//戦闘に移る
+						battle_buffer[1]=4;
+					}else{
+						battle_buffer[1]=3;
+					}
+				}else if(disheight/32*27<y){
+				}
+			}else{
+				if(disheight/16*11<y&&disheight/32*27>y){
+				}else if(disheight/32*27<y){
+					battle_flags[0]=false;
+					game_flags[13]=false;
+				}
+			}
+		}else if(battle_buffer[1]==3){
+			if(diswidth/2>x){
+				if(disheight/16*11<y&&disheight/32*27>y){
+					select_action[2][0]=0;
+					select_action[2][1]=0;
+					//戦闘に移る
+					battle_buffer[1]=4;
+				}else if(disheight/32*27<y){
+				}
+			}else{
+				if(disheight/16*11<y&&disheight/32*27>y){
+				}else if(disheight/32*27<y){
+					battle_flags[0]=false;
+					game_flags[13]=false;
+				}
+			}
+		}
+	}
+
+	void battle_menu(Canvas canvas,int num){
+		paint.setStyle(Paint.Style.STROKE);
+		paint.setStrokeWidth(CHIP_SIZE/10);
+		RectF rectf = new RectF(CHIP_SIZE/10,disheight/16*11+CHIP_SIZE/10,diswidth/2-CHIP_SIZE/10,disheight/32*27-CHIP_SIZE/10);
+		canvas.drawRoundRect(rectf, 30, 30, paint);
+		rectf = new RectF(CHIP_SIZE/10,disheight/32*27+CHIP_SIZE/10,diswidth/2-CHIP_SIZE/10,disheight-CHIP_SIZE/10);
+		canvas.drawRoundRect(rectf, 30, 30, paint);
+		rectf = new RectF(diswidth/2+CHIP_SIZE/10,disheight/16*11+CHIP_SIZE/10,diswidth-CHIP_SIZE/10,disheight/32*27-CHIP_SIZE/10);
+		canvas.drawRoundRect(rectf, 30, 30, paint);
+		rectf = new RectF(diswidth/2+CHIP_SIZE/10,disheight/32*27+CHIP_SIZE/10,diswidth-CHIP_SIZE/10,disheight-CHIP_SIZE/10);
+		canvas.drawRoundRect(rectf, 30, 30, paint);
+
+		paint.setStyle(Paint.Style.FILL_AND_STROKE);
+		paint.setTextSize(CHIP_SIZE/2);
+		paint.setStrokeWidth(0.0f);
+		canvas.drawText(player.list[num].getName(0)+"はどうする？",CHIP_SIZE/2,disheight/8*5+CHIP_SIZE*3/4,paint);
+		paint.setTextSize(CHIP_SIZE);
+		canvas.drawText("たたかう",CHIP_SIZE,disheight/16*11+CHIP_SIZE*2,paint);
+		canvas.drawText("特技",CHIP_SIZE+diswidth/2,disheight/16*11+CHIP_SIZE*2,paint);
+		canvas.drawText("道具",CHIP_SIZE,disheight/32*27+CHIP_SIZE*2,paint);
+		canvas.drawText("逃げる",CHIP_SIZE+diswidth/2,disheight/32*27+CHIP_SIZE*2,paint);
 	}
 
 	void DispBattle(Canvas canvas){
@@ -1197,8 +1331,36 @@ public class rpgMain extends SurfaceView
 		RectF rect = new RectF(CHIP_SIZE/7,CHIP_SIZE/7,diswidth-CHIP_SIZE/7,(int)CHIP_SIZE*3+CHIP_SIZE/2-CHIP_SIZE/7);
 		canvas.drawRoundRect(rect, 20, 20, paint);
 
+		if(battle_buffer[1]==1){
+			battle_menu(canvas,0);
+		}else if(battle_buffer[1]==2){
+			battle_menu(canvas,1);
+		}else if(battle_buffer[1]==3){
+			battle_menu(canvas,2);
+		}
+
 		paint.setStyle(Paint.Style.FILL_AND_STROKE);
 		paint.setStrokeWidth(0.0f);
+
+		paint.setTextSize(CHIP_SIZE/3);
+		canvas.drawText("fps: "+(int)(1/FrameTime),0,CHIP_SIZE*4,paint);
+		//canvas.drawText("文字数: "+battle_buffer[3],0,CHIP_SIZE*13/3,paint);
+
+		paint.setTextSize(CHIP_SIZE/2);
+		if(battle_flags[0]){
+			int x,y;//描画位置
+			x=y=0;
+			for(int i=0;i<battle_buffer[3];i++){
+				//19文字で改行
+				if(x==19){
+					x=0;
+					y++;
+				}
+				canvas.drawText(String.valueOf(game_talks[i]),CHIP_SIZE/2+x*CHIP_SIZE/2,disheight/2+CHIP_SIZE+ 	y*CHIP_SIZE/2,paint);
+				x++;
+			}
+		}
+
 		States e_states=player.list[0].getStates();
 		canvas.drawText(""+player.list[0].getName(0),CHIP_SIZE/2,CHIP_SIZE*1,paint);
 		canvas.drawText("Lv "+e_states.lv,CHIP_SIZE/2,CHIP_SIZE*1+CHIP_SIZE/2,paint);
@@ -1222,11 +1384,11 @@ public class rpgMain extends SurfaceView
 
 		Rect srcRect,destRect;
 
-		if(game_buffer[10]==1){
+		if(battle_buffer[0]==1){
 			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*4,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*7,(int)disheight/2);
 			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
-		}else if(game_buffer[10]==2){
+		}else if(battle_buffer[0]==2){
 			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*2,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*5,(int)disheight/2);
 			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);

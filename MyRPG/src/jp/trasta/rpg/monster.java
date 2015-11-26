@@ -5,7 +5,9 @@ import java.util.Random;
 
 class States {
 	public int lv;
+	public int max_hp;
 	public int hp;//HP
+	public int max_mp;
 	public int mp;//MP
 	public int speed;//素早さ
 	public int atp;//攻撃力
@@ -39,12 +41,12 @@ class Monster {
 	}
 
 	// idからモンスターを取得 type 0:味方 1:敵
-	public Monster getMonster(int id,int type,int Lv){
+	public Monster getMonster(int id,int Lv){
 		Monster list[] = {
-			new Nazo(type,Lv),
-			new Slime(type,Lv),
-			new Golem(type,Lv),
-			new Bika(type,Lv)
+			new Nazo(Lv),
+			new Slime(Lv),
+			new Golem(Lv),
+			new Bika(Lv)
 		};
 		return list[id];
 	}
@@ -107,10 +109,12 @@ class Monster {
 	}
 
 	//レベルをセット
-	public void setLv(int lv,int type) {//type 0:味方 1:敵
+	public void setLv(int lv,int type) {//type 0:そのまま 1:全快
 		this.states.lv=lv;
-		this.states.hp=(int)(((this.tribal[0]*2+this.initial[0]+10)*lv/100+lv+10)*getTemperValue(this.states.temper)[0]);
-		this.states.mp=(int)(((this.tribal[1]*2+this.initial[1])*lv/100)*getTemperValue(this.states.temper)[1]);
+		this.states.max_hp=(int)(((this.tribal[0]*2+this.initial[0]+10)*lv/100+lv+10)*getTemperValue(this.states.temper)[0]);
+		if(type==1) this.states.hp=this.states.max_hp;
+		this.states.max_mp=(int)(((this.tribal[1]*2+this.initial[1])*lv/100)*getTemperValue(this.states.temper)[1]);
+		if(type==1) this.states.max_mp=this.states.mp;
 		this.states.speed=(int)(((this.tribal[2]*2+this.initial[2])*lv/100+5)*getTemperValue(this.states.temper)[2]);
 		this.states.atp=(int)(((this.tribal[3]*2+this.initial[3])*lv/100+5)*getTemperValue(this.states.temper)[3]);
 		this.states.map=(int)(((this.tribal[4]*2+this.initial[4])*lv/100+5)*getTemperValue(this.states.temper)[4]);
@@ -148,30 +152,30 @@ class Nazo extends Monster {
 	// hp speed atp map dp dm
 	private int tribal[]={80,80,80,80,80,80,80};
 	private int temper=rand.nextInt(2);
-	Nazo(int type,int lv){
+	Nazo(int lv){
 		super(0,"アンノウン",0,35);
 		setMonsterData(this.tribal,this.temper);
-		setLv(lv,type);
+		setLv(lv,1);
 	}
 };
 
 class Slime extends Monster {
 	private int tribal[]={80,80,80,80,80,80,80};
 	private int temper=rand.nextInt(2);
-	Slime(int type,int lv){
+	Slime(int lv){
 		super(1,"スライム",8,30);
 		setMonsterData(this.tribal,this.temper);
-		setLv(lv,type);
+		setLv(lv,1);
 	}
 };
 
 class Golem extends Monster {
 	private int tribal[]={120,50,60,100,20,90,60};
 	private int temper=rand.nextInt(2);
-	Golem(int type,int lv){
+	Golem(int lv){
 		super(2,"ゴーレム",8,30);
 		setMonsterData(this.tribal,this.temper);
-		setLv(lv,type);
+		setLv(lv,1);
 	}
 };
 
@@ -179,9 +183,9 @@ class Golem extends Monster {
 class Bika extends Monster {
 	private int tribal[]={80,100,120,60,80,70,70};
 	private int temper=rand.nextInt(2);
-	Bika(int type,int lv){
+	Bika(int lv){
 		super(3,"びかちゅー",8,30);
 		setMonsterData(this.tribal,this.temper);
-		setLv(lv,type);
+		setLv(lv,1);
 	}
 };
