@@ -87,6 +87,7 @@ public class rpgMain extends SurfaceView
 	//------------ゲーム管理ウェイト-----------
 	//0=黒い幕の昇降ウェイト
 	//1=会話の流れる文字ウェイト
+	//2=モンスター点滅ウェイト
 	float game_waits[] = new float[8];
 
 	//------------ゲーム管理バッファ-----------
@@ -105,17 +106,24 @@ public class rpgMain extends SurfaceView
 	//------------バトル管理バッファ-----------
 	//0=敵の数
 	//1=ターン
+	//2=行動 n人目
 	//3=log 文字の位置
+	//4=ターゲットモンスター
+	//5=攻撃するモンスター
 	int battle_buffer[] = new int[16];
 
 	//------------バトル管理フラグ-------------
 	//0=log判定
 	//1=文字が流れる途中
+	//2=モンスター点滅フラグ
+	//3=上に同じです
+	//4=終了フラグ
 	boolean battle_flags[] = new boolean[8];
 
+	// 0,0,標的 が攻撃 1,id,標的 が特技 2,idが道具
+	int select_action[][] = new int[3][3];
 
-	// 0,0が攻撃 1,id が特技 2,idが道具
-	int select_action[][] = new int[3][2];
+	int speed_s[]=new int[6];
 
 	//------------ゲーム管理文字列-----------
 	//0=現在のスクリプトファイル名
@@ -573,6 +581,7 @@ public class rpgMain extends SurfaceView
 	private void update(){
 		move();
 		paint();
+		turn_battle();
 		//キー状態で移動処理
 		if(game_flags[0] || game_flags[1] || game_flags[2]|| game_flags[3] ||game_flags[14] ||game_flags[15]||game_flags[13]){;}
 		else{
@@ -630,6 +639,7 @@ public class rpgMain extends SurfaceView
 					battle_buffer[3] = game_strings[5].length();
 					//完了
 					battle_flags[1] = false;
+					if(battle_flags[2]) battle_flags[2] = true;
 				}
 			}
 		}
@@ -1177,8 +1187,13 @@ public class rpgMain extends SurfaceView
 				if(!battle_flags[1]) update_battle(x,y);
 				else battle_buffer[3] = game_strings[5].length();
 				battle_flags[1] = false;
+				if(battle_flags[2]) battle_flags[2] = true;
 			}
-			//game_flags[13]=false;
+			if(battle_flags[4]&&!battle_flags[1]){
+				battle_buffer[1]=0;
+				battle_flags[0]=false;
+				game_flags[13]=false;
+			}
 			return;
 		}
 		//ダイアログ中は決定
@@ -1212,9 +1227,12 @@ public class rpgMain extends SurfaceView
 					ran=rand.nextInt(3);
 					Occurrence oc=new Occurrence(now_map_no,map_data[x][y]);
 					Monster list[]=new Monster[3];
+					for(int i=0;i<3;i++) list[i]=new Monster();
 					for(int i=0;i<=ran;i++) list[i]=oc.getOccurrence();
 					battle_buffer[0]=ran+1;
+					battle_flags[4]=false;
 					Battle(list);
+					battle_flags[3]=false;
 					game_buffer[9]=0;
 				}
 			}
@@ -1222,11 +1240,164 @@ public class rpgMain extends SurfaceView
 		}
 	}
 
+	void Action(int n,int i){
+		if(n==0){
+			if(select_action[i][0]==0){
+				int target=select_action[i][2];
+				if(enemy_list[target].islive()){
+					game_strings[5]=player.list[i].getName(0)+"のこうげき！";
+					battle_flags[0]=true;
+					battle_flags[1]=true;
+					battle_flags[2]=true;
+					battle_buffer[3]=0;
+					battle_buffer[4]=target;
+					battle_buffer[5]=i;
+					//char配列にコピー
+					game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
+				}else{
+					//標的変更
+				}
+			}else if(select_action[i][0]==1){
+				//特技
+			}else if(select_action[i][0]==2){
+				//道具
+			}
+		}else if(n==1){
+					game_strings[5]=enemy_list[i].getName(0)+"のこうげき！";
+					battle_flags[1]=true;
+					battle_flags[2]=true;
+					battle_buffer[4]=4;
+					battle_buffer[3]=0;
+					//char配列にコピー
+					game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
+		}
+	}
+
+	void speed_decision(int num){
+		int on=1;/*
+		int a=num;
+		while(true){
+			if(a>-1&&speed_s[a]>0){
+				if(speed_s[a]==speed_s[a-1]){
+					a--;
+					on++;
+				}else{
+					break;
+				}
+			}else{
+				break;
+			}
+		}*/
+		for(int i=0;i<3;i++){
+			if(player.list[i].islive()&&speed_s[num]==player.list[i].getStates().speed){
+				if(on>1){
+					int ran=rand.nextInt(on);
+					if(ran==0){
+						Action(0,i);
+						break;
+					}else{on--;}
+				}else{
+					Action(0,i);
+					break;
+				}
+			}
+			if(enemy_list[i].islive()&&speed_s[num]==enemy_list[i].getStates().speed){
+				if(on>1){
+					int ran=rand.nextInt(on);
+					if(ran==0){
+						Action(0,i);
+						break;
+					}else{on--;}
+				}else{
+					Action(1,i);
+					break;
+				}
+			}
+		}
+	}
+
+	void turn_battle(){
+		if(battle_flags[4]) return;
+		if(!battle_flags[1]&&battle_flags[2]){
+			game_waits[2] += FrameTime;
+			if(battle_flags[3]) battle_flags[3]=false;
+			else battle_flags[3]=true;
+			if(game_waits[2] >= 0.8f){
+				game_waits[2] = 0.0f;
+				battle_flags[2]=false;
+				battle_flags[3]=false;
+				int command=select_action[battle_buffer[5]][0];
+				int id=select_action[battle_buffer[5]][1];
+				int target=battle_buffer[4];
+				if(command==0){
+					if(target<4) enemy_list[target]=player.list[battle_buffer[5]].attack(enemy_list[target]);
+				}
+			}
+			return;
+		}
+		if(battle_buffer[1]==7){
+			for(int i=0;i<3;i++){
+				if(player.list[i].islive()) speed_s[i]=player.list[i].getStates().speed;
+				else speed_s[i]=-1;
+				if(enemy_list[i].islive()) speed_s[i+3]=enemy_list[i].getStates().speed;
+				else speed_s[i+3]=-1;
+			}
+			Arrays.sort(speed_s);
+			for(int i=0, j=speed_s.length-1; i< j; i++, j--) {
+				int t=speed_s[i]; speed_s[i]=speed_s[j]; speed_s[j]=t;
+			}
+			battle_buffer[2]=1;
+			battle_buffer[1]=8;
+		}else if(battle_buffer[1]==8&&!battle_flags[1]){
+			if(player.hasmonster+battle_buffer[0]>=battle_buffer[2]){
+				speed_decision(battle_buffer[2]-1);
+				battle_buffer[2]++;
+			}else{
+				battle_buffer[1]=9;
+				battle_buffer[2]=0;
+			}
+		}else if(battle_buffer[1]==9){
+			//終了判定
+			boolean player_flag=false;
+			boolean enemy_flag=false;
+			for(int e=0;e<3;e++){
+				if(enemy_list[e].islive()){
+					enemy_flag=true;
+					break;
+				}
+			}
+			for(int p=0;p<3;p++){
+				if(player.list[p].islive()){
+					player_flag=true;
+					break;
+				}
+			}
+			if(!enemy_flag){
+				//味方の勝ち
+				game_strings[5]="モンスター達をたおした。";
+				battle_flags[0]=true;
+				battle_flags[1]=true;
+				battle_flags[4]=true;
+				battle_buffer[3]=0;
+				//char配列にコピー
+				game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
+			}else if(!player_flag){
+				//敵の勝ち
+				battle_buffer[1]=0;
+				battle_flags[0]=false;
+				game_flags[13]=false;
+			}else{
+				battle_buffer[1]=1;
+			}
+		}
+	}
+
 	void Battle(Monster e_list[]){
 		//battle_buffer[1]
 			//1=1匹目 選択
-			//2=2匹目 選択
-			//3=3匹目 選択
+			//3=2匹目 選択
+			//5=3匹目 選択
+			//7=素早さ判定
 		enemy_list=e_list;
 		game_flags[14]=true;
 		enemy_a=getImage(enemy_list[0].getid());
@@ -1239,13 +1410,24 @@ public class rpgMain extends SurfaceView
 
 	void update_battle(int x,int y){
 		if(battle_buffer[1]==1){
+			int cnt=0;
+			for(int i=2;i>=0;i--){
+				if(enemy_list[i].islive()){
+					select_action[0][2]=i;
+					cnt++;
+				}
+			}
 			if(diswidth/2>x){
 				if(disheight/16*11<y&&disheight/32*27>y){
 					select_action[0][0]=0;
 					select_action[0][1]=0;
-					if(player.hasmonster==1){
+					if(cnt==1){
 						//戦闘に移る
-						battle_buffer[1]=4;
+						if(player.hasmonster==1){
+							battle_buffer[1]=7;
+						}else{
+							battle_buffer[1]=3;
+						}
 					}else{
 						battle_buffer[1]=2;
 					}
@@ -1256,18 +1438,30 @@ public class rpgMain extends SurfaceView
 				}else if(disheight/32*27<y){
 					battle_flags[0]=false;
 					game_flags[13]=false;
+					battle_buffer[1]=0;
 				}
 			}
-		}else if(battle_buffer[1]==2){
+		}else if(battle_buffer[1]==3){
+			int cnt=0;
+			for(int i=2;i>=0;i--){
+				if(enemy_list[i].islive()){
+					select_action[1][2]=i;
+					cnt++;
+				}
+			}
 			if(diswidth/2>x){
 				if(disheight/16*11<y&&disheight/32*27>y){
 					select_action[1][0]=0;
 					select_action[1][1]=0;
-					if(player.hasmonster==2){
+					if(cnt==1){
 						//戦闘に移る
-						battle_buffer[1]=4;
+						if(player.hasmonster==2){
+							battle_buffer[1]=7;
+						}else{
+							battle_buffer[1]=5;
+						}
 					}else{
-						battle_buffer[1]=3;
+						battle_buffer[1]=4;
 					}
 				}else if(disheight/32*27<y){
 				}
@@ -1276,15 +1470,26 @@ public class rpgMain extends SurfaceView
 				}else if(disheight/32*27<y){
 					battle_flags[0]=false;
 					game_flags[13]=false;
+					battle_buffer[1]=0;
 				}
 			}
-		}else if(battle_buffer[1]==3){
+		}else if(battle_buffer[1]==5){
+			int cnt=0;
+			for(int i=2;i>=0;i--){
+				if(enemy_list[i].islive()){
+					select_action[2][2]=i;
+					cnt++;
+				}
+			}
 			if(diswidth/2>x){
 				if(disheight/16*11<y&&disheight/32*27>y){
 					select_action[2][0]=0;
 					select_action[2][1]=0;
-					//戦闘に移る
-					battle_buffer[1]=4;
+					if(cnt==1){
+						battle_buffer[1]=7;
+					}else{
+						battle_buffer[1]=6;
+					}
 				}else if(disheight/32*27<y){
 				}
 			}else{
@@ -1292,8 +1497,47 @@ public class rpgMain extends SurfaceView
 				}else if(disheight/32*27<y){
 					battle_flags[0]=false;
 					game_flags[13]=false;
+					battle_buffer[1]=0;
 				}
 			}
+		}else if(battle_buffer[1]==2||battle_buffer[1]==4||battle_buffer[1]==6){
+			int u=(battle_buffer[1]/2)-1;
+			if(y<disheight/2&&y>disheight/2-CHIP_SIZE*3){
+				if(battle_buffer[0]==2){
+					if(x>CHIP_SIZE*2&&x<CHIP_SIZE*5&&enemy_list[0].islive()){
+						if(select_action[u][2]==0) battle_buffer[1]++;
+						else select_action[u][2]=0;
+					}else if(x>CHIP_SIZE*6&&x<CHIP_SIZE*9&&enemy_list[1].islive()){
+						if(select_action[u][2]==1) battle_buffer[1]++;
+						else select_action[u][2]=1;
+					}
+				}else if(battle_buffer[0]==3){
+					if(x>CHIP_SIZE*0&&x<CHIP_SIZE*3&&enemy_list[0].islive()){
+						if(select_action[u][2]==0) battle_buffer[1]++;
+						else select_action[u][2]=0;
+					}else if(x>CHIP_SIZE*4&&x<CHIP_SIZE*7&&enemy_list[1].islive()){
+						if(select_action[u][2]==1) battle_buffer[1]++;
+						else select_action[u][2]=1;
+					}else if(x>CHIP_SIZE*8&&x<CHIP_SIZE*11&&enemy_list[2].islive()){
+						if(select_action[u][2]==2) battle_buffer[1]++;
+						else select_action[u][2]=2;
+					}
+				}
+			}
+		}
+	}
+
+	void target_select(Canvas canvas,int num){
+		paint.setStyle(Paint.Style.FILL_AND_STROKE);
+		paint.setTextSize(CHIP_SIZE/2);
+		paint.setStrokeWidth(0.0f);
+		if(battle_buffer[0]==2){
+			if(select_action[num][2]==0) canvas.drawText("φ",(int)CHIP_SIZE*7/2,(int)disheight/2-CHIP_SIZE*4,paint);
+			else if(select_action[num][2]==1) canvas.drawText("φ",(int)CHIP_SIZE*15/2,(int)disheight/2-CHIP_SIZE*4,paint);
+		}else if(battle_buffer[0]==3){
+			if(select_action[num][2]==0) canvas.drawText("φ",(int)CHIP_SIZE*3/2,(int)disheight/2-CHIP_SIZE*4,paint);
+			else if(select_action[num][2]==1) canvas.drawText("φ",(int)CHIP_SIZE*11/2,(int)disheight/2-CHIP_SIZE*4,paint);
+			else if(select_action[num][2]==2) canvas.drawText("φ",(int)CHIP_SIZE*19/2,(int)disheight/2-CHIP_SIZE*4,paint);
 		}
 	}
 
@@ -1333,10 +1577,16 @@ public class rpgMain extends SurfaceView
 
 		if(battle_buffer[1]==1){
 			battle_menu(canvas,0);
-		}else if(battle_buffer[1]==2){
-			battle_menu(canvas,1);
 		}else if(battle_buffer[1]==3){
+			battle_menu(canvas,1);
+		}else if(battle_buffer[1]==5){
 			battle_menu(canvas,2);
+		}else if(battle_buffer[1]==2){
+			target_select(canvas,0);
+		}else if(battle_buffer[1]==4){
+			target_select(canvas,1);
+		}else if(battle_buffer[1]==6){
+			target_select(canvas,2);
 		}
 
 		paint.setStyle(Paint.Style.FILL_AND_STROKE);
@@ -1344,7 +1594,9 @@ public class rpgMain extends SurfaceView
 
 		paint.setTextSize(CHIP_SIZE/3);
 		canvas.drawText("fps: "+(int)(1/FrameTime),0,CHIP_SIZE*4,paint);
-		//canvas.drawText("文字数: "+battle_buffer[3],0,CHIP_SIZE*13/3,paint);
+		canvas.drawText("ターン: "+battle_buffer[1],0,CHIP_SIZE*13/3,paint);
+		canvas.drawText(""+battle_buffer[2],0,CHIP_SIZE*14/3,paint);
+		canvas.drawText("hp: "+enemy_list[0].getStates().hp,0,CHIP_SIZE*15/3,paint);
 
 		paint.setTextSize(CHIP_SIZE/2);
 		if(battle_flags[0]){
@@ -1387,24 +1639,24 @@ public class rpgMain extends SurfaceView
 		if(battle_buffer[0]==1){
 			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*4,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*7,(int)disheight/2);
-			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
+			if(enemy_list[0].islive()&&(!battle_flags[3]||battle_buffer[4]!=0)) canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
 		}else if(battle_buffer[0]==2){
 			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*2,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*5,(int)disheight/2);
-			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
+			if(enemy_list[0].islive()&&(!battle_flags[3]||battle_buffer[4]!=0)) canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
 			srcRect = new Rect(0,0,enemy_b.getWidth(),enemy_b.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*6,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*9,(int)disheight/2);
-			canvas.drawBitmap(enemy_b,srcRect,destRect,paint);
+			if(enemy_list[1].islive()&&(!battle_flags[3]||battle_buffer[4]!=1)) canvas.drawBitmap(enemy_b,srcRect,destRect,paint);
 		}else{
 			srcRect = new Rect(0,0,enemy_a.getWidth(),enemy_a.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*0,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*3,(int)disheight/2);
-			canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
+			if(enemy_list[0].islive()&&(!battle_flags[3]||battle_buffer[4]!=0)) canvas.drawBitmap(enemy_a,srcRect,destRect,paint);
 			srcRect = new Rect(0,0,enemy_b.getWidth(),enemy_b.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*4,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*7,(int)disheight/2);
-			canvas.drawBitmap(enemy_b,srcRect,destRect,paint);
+			if(enemy_list[1].islive()&&(!battle_flags[3]||battle_buffer[4]!=1)) canvas.drawBitmap(enemy_b,srcRect,destRect,paint);
 			srcRect = new Rect(0,0,enemy_c.getWidth(),enemy_c.getHeight());
 			destRect = new Rect((int)CHIP_SIZE*8,(int)disheight/2-CHIP_SIZE*3,(int)CHIP_SIZE*11,(int)disheight/2);
-			canvas.drawBitmap(enemy_c,srcRect,destRect,paint);
+			if(enemy_list[2].islive()&&(!battle_flags[3]||battle_buffer[4]!=2)) canvas.drawBitmap(enemy_c,srcRect,destRect,paint);
 		}
 	}
 
@@ -1721,6 +1973,12 @@ public class rpgMain extends SurfaceView
 		}
 		game_flags[5]=next_flag;
 		return next_flag;
+	}
+
+	public void onbackkey(){
+		battle_buffer[1]=0;
+		battle_flags[0]=false;
+		game_flags[13]=false;
 	}
 
 }

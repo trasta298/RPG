@@ -28,6 +28,7 @@ class Monster {
 	private int tribal[]=new int[7];//種族値
 	private int exp;//経験値
 	private int exptable;//経験値テーブル 30:300万テーブル など
+	private boolean live=false;
 	private String name;//名前
 	private String Nname;//ニックネーム
 
@@ -114,21 +115,39 @@ class Monster {
 		this.states.max_hp=(int)(((this.tribal[0]*2+this.initial[0]+10)*lv/100+lv+10)*getTemperValue(this.states.temper)[0]);
 		if(type==1) this.states.hp=this.states.max_hp;
 		this.states.max_mp=(int)(((this.tribal[1]*2+this.initial[1])*lv/100)*getTemperValue(this.states.temper)[1]);
-		if(type==1) this.states.max_mp=this.states.mp;
+		if(type==1) this.states.mp=this.states.max_mp;
 		this.states.speed=(int)(((this.tribal[2]*2+this.initial[2])*lv/100+5)*getTemperValue(this.states.temper)[2]);
 		this.states.atp=(int)(((this.tribal[3]*2+this.initial[3])*lv/100+5)*getTemperValue(this.states.temper)[3]);
 		this.states.map=(int)(((this.tribal[4]*2+this.initial[4])*lv/100+5)*getTemperValue(this.states.temper)[4]);
 		this.states.dp=(int)(((this.tribal[5]*2+this.initial[5])*lv/100+5)*getTemperValue(this.states.temper)[5]);
 		this.states.dm=(int)(((this.tribal[6]*2+this.initial[6])*lv/100+5)*getTemperValue(this.states.temper)[6]);
+		if(type==1) this.live=true;
 	}
 
 	public int getid(){
 		return this.id;
 	}
 
+	public boolean islive(){
+		return this.live;
+	}
+
 	//ステータスを取得
 	public States getStates(){
 		return states;
+	}
+
+	public Monster attack(Monster victim){
+		States s=victim.getStates();
+		int ran=rand.nextInt(15)+85;
+		int app=((this.states.lv*2/5+2)*80*this.states.atp/s.dp/50+2)*ran/100;
+		victim.setHP(s.hp-app);
+		return victim;
+	}
+
+	public void setHP(int i){
+		if(i<0){i=0;this.live=false;}
+		this.states.hp=i;
 	}
 
 	public String getName(int type){
