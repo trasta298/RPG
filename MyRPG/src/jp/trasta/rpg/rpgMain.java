@@ -1266,7 +1266,12 @@ public class rpgMain extends SurfaceView
 					game_strings[5]=enemy_list[i].getName(0)+"のこうげき！";
 					battle_flags[1]=true;
 					battle_flags[2]=true;
-					battle_buffer[4]=4;
+					EnemyAi eai=new EnemyAi(enemy_list,i,player.list);
+					select_action[i][0]=eai.getAction();
+					select_action[i][1]=eai.getID();
+					select_action[i][2]=eai.getTarget();
+					battle_buffer[4]=select_action[i][2]+3;
+					battle_buffer[5]=i;
 					battle_buffer[3]=0;
 					//char配列にコピー
 					game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
@@ -1331,6 +1336,7 @@ public class rpgMain extends SurfaceView
 				int target=battle_buffer[4];
 				if(command==0){
 					if(target<4) enemy_list[target]=player.list[battle_buffer[5]].attack(enemy_list[target]);
+					if(target>3) player.list[target-3]=enemy_list[battle_buffer[5]].attack(player.list[target-3]);
 				}
 			}
 			return;
