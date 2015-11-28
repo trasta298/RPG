@@ -24,11 +24,19 @@ class EnemyAi{
 	}
 
 	public int getTarget(){
-		ArrayList<Integer> n = new ArrayList<Integer>();
+		int n=0;
+		for(int i=0;i<3;i++){if(this.p_list[i].islive())n++;}
 		for(int i=0;i<3;i++){
-			if(this.p_list[i].islive()) n.add(new Integer(i));
+			if(this.p_list[i].islive()){
+				if(n==1){return i;}
+				else{
+					int ran=rand.nextInt(n);
+					if(ran==0) return i;
+					n--;
+				}
+			}
 		}
-		return n.get(rand.nextInt(n.size()));
+		return -1;
 	}
 
 }

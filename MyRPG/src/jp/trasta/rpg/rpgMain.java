@@ -1256,6 +1256,20 @@ public class rpgMain extends SurfaceView
 					game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
 				}else{
 					//標的変更
+					for(int p=0;p<3;p++){
+						if(enemy_list[p].islive()){
+							game_strings[5]=player.list[i].getName(0)+"のこうげき！";
+							battle_flags[0]=true;
+							battle_flags[1]=true;
+							battle_flags[2]=true;
+							battle_buffer[3]=0;
+							battle_buffer[4]=target;
+							battle_buffer[5]=i;
+							//char配列にコピー
+							game_strings[5].getChars(0,game_strings[5].length(),game_talks,0);
+							break;
+						}
+					}
 				}
 			}else if(select_action[i][0]==1){
 				//特技
@@ -1263,14 +1277,15 @@ public class rpgMain extends SurfaceView
 				//道具
 			}
 		}else if(n==1){
-					game_strings[5]=enemy_list[i].getName(0)+"のこうげき！";
-					battle_flags[1]=true;
-					battle_flags[2]=true;
 					EnemyAi eai=new EnemyAi(enemy_list,i,player.list);
 					select_action[i][0]=eai.getAction();
 					select_action[i][1]=eai.getID();
 					select_action[i][2]=eai.getTarget();
+					if(select_action[i][2]==-1) return;
 					battle_buffer[4]=select_action[i][2]+3;
+					game_strings[5]=enemy_list[i].getName(0)+"のこうげき！";
+					battle_flags[1]=true;
+					battle_flags[2]=true;
 					battle_buffer[5]=i;
 					battle_buffer[3]=0;
 					//char配列にコピー
@@ -1335,8 +1350,8 @@ public class rpgMain extends SurfaceView
 				int id=select_action[battle_buffer[5]][1];
 				int target=battle_buffer[4];
 				if(command==0){
-					if(target<4) enemy_list[target]=player.list[battle_buffer[5]].attack(enemy_list[target]);
-					if(target>3) player.list[target-3]=enemy_list[battle_buffer[5]].attack(player.list[target-3]);
+					if(target<3) enemy_list[target]=player.list[battle_buffer[5]].attack(enemy_list[target]);
+					if(target>2) player.list[target-3]=enemy_list[battle_buffer[5]].attack(player.list[target-3]);
 				}
 			}
 			return;
@@ -1600,9 +1615,9 @@ public class rpgMain extends SurfaceView
 
 		paint.setTextSize(CHIP_SIZE/3);
 		canvas.drawText("fps: "+(int)(1/FrameTime),0,CHIP_SIZE*4,paint);
-		canvas.drawText("ターン: "+battle_buffer[1],0,CHIP_SIZE*13/3,paint);
-		canvas.drawText(""+battle_buffer[2],0,CHIP_SIZE*14/3,paint);
-		canvas.drawText("hp: "+enemy_list[0].getStates().hp,0,CHIP_SIZE*15/3,paint);
+		canvas.drawText(enemy_list[0].getStates().lv+"Lv hp: "+enemy_list[0].getStates().hp,0,CHIP_SIZE*13/3,paint);
+		canvas.drawText(enemy_list[1].getStates().lv+"Lv hp: "+enemy_list[1].getStates().hp,0,CHIP_SIZE*14/3,paint);
+		canvas.drawText(enemy_list[2].getStates().lv+"Lv hp: "+enemy_list[2].getStates().hp,0,CHIP_SIZE*15/3,paint);
 
 		paint.setTextSize(CHIP_SIZE/2);
 		if(battle_flags[0]){

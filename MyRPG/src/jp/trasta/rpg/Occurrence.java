@@ -17,7 +17,7 @@ class Occurrence{
 				switch(this.cell){
 					case 0 : 
 						int o[]={1,2,1};
-						int ran=rand.nextInt(5)+60;
+						int ran=rand.nextInt(5)+5;
 						int i=o[rand.nextInt(3)];
 						return monster.getMonster(i,ran);
 				}
@@ -26,7 +26,7 @@ class Occurrence{
 				switch(this.cell){
 					case 0 : 
 						int o[]={1,2,3};
-						int ran=rand.nextInt(30)+50;
+						int ran=rand.nextInt(5)+5;
 						int i=o[rand.nextInt(3)];
 						return monster.getMonster(i,ran);
 				}

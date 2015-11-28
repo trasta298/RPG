@@ -17,9 +17,9 @@ public class Player{
 		this.chip_no = chip_no;
 		moving_dir = 1;
 		anime_no = 0;
-		list[0]=base.getMonster(1,90);
-		list[1]=base.getMonster(1,90);
-		list[2]=base.getMonster(3,90);
+		list[0]=base.getMonster(1,15);
+		list[1]=base.getMonster(2,15);
+		list[2]=base.getMonster(3,15);
 		hasmonster=3;
 	}
 }
